@@ -3,8 +3,6 @@ import axios from 'axios'
 
 function ApiPractice() {
   const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
 
   const [form, setForm] = useState({ title: '', body: '' })
   const [submitting, setSubmitting] = useState(false)
@@ -21,32 +19,6 @@ function ApiPractice() {
     document.title = 'API Functionality'
   }, [])
 
-  // fetch list
-  useEffect(() => {
-    let cancelled = false
-
-    const loadPosts = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const res = await axios.get(
-          'https://jsonplaceholder.typicode.com/posts'
-        )
-        if (!cancelled) {
-          setPosts(res.data.slice(0, 10)) // limit to 10 for brevity
-        }
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    loadPosts()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -66,11 +38,15 @@ function ApiPractice() {
     axios[method](url + (editingId ? `/${editingId}` : ''), payload)
       .then((res) => {
         if (editingId) {
-          setPosts((p) => p.map((x) => (x.id === editingId ? res.data : x)))
+          const updatedPost = { ...res.data, id: editingId }
+          setPosts((p) => p.map((x) => (x.id === editingId ? updatedPost : x)))
           setEditingId(null)
           setSubmitSuccess('Update successful')
         } else {
-          setPosts((p) => [res.data, ...p])
+          // generate a local sequential ID starting at 1
+          const nextId = posts.length > 0 ? Math.max(...posts.map((x) => x.id)) + 1 : 1
+          const newPost = { ...res.data, id: nextId }
+          setPosts((p) => [newPost, ...p])
           setSubmitSuccess('Post submitted successfully')
         }
         setForm({ title: '', body: '' })
@@ -102,11 +78,6 @@ function ApiPractice() {
       .finally(() => setDeletingId(null))
   }
 
-    // keep references to avoid eslint 'no-unused-vars' after removing table rows
-    void posts
-    void deletingId
-    void startEdit
-    void handleDelete
 
   return (
     <div className="flex flex-col items-center space-y-6 bg-gray-800 p-8 rounded-lg card-hover animate-slide-up w-full max-w-3xl">
@@ -114,16 +85,9 @@ function ApiPractice() {
         API Practice
       </h1>
 
-      {/* fetch state */}
-      {loading && (
-        <div className="flex items-center gap-2 text-blue-400">
-          <div className="spinner"></div>
-          <span>Loading data...</span>
-        </div>
-      )}
-      {error && <p className="text-red-600 font-medium">Error: {error}</p>}
 
-      {/* post form */}
+
+
       <form
         onSubmit={handleSubmit}
         className="bg-gray-700 p-6 rounded-lg space-y-4 border border-gray-600"
@@ -183,7 +147,7 @@ function ApiPractice() {
       {editingId && <p className="text-yellow-400">Editing post #{editingId}</p>}
       </form>
 
-      {/* posts table - headers only (rows removed per request) */}
+
       <div className="overflow-x-auto rounded-lg shadow-sm w-full">
         <table className="w-full table-auto border-collapse text-sm text-gray-600">
           <thead className="bg-gray-100">
